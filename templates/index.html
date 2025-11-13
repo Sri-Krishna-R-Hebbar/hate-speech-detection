@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hate Speech Detection - Bi-MinLSTM</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚫 Hate Speech Detection</h1>
+            <p class="subtitle">Powered by Bi-MinLSTM Neural Network</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="textInput">Enter text to analyze:</label>
+                    <textarea 
+                        id="textInput" 
+                        placeholder="Type or speak your text here..."
+                        rows="6"
+                    ></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button id="speechBtn" class="btn btn-primary">
+                        <span class="mic-icon">🎤</span>
+                        <span id="speechBtnText">Start Recording</span>
+                    </button>
+                    <button id="analyzeBtn" class="btn btn-success">
+                        🔍 Analyze Text
+                    </button>
+                    <button id="clearBtn" class="btn btn-secondary">
+                        🗑️ Clear
+                    </button>
+                </div>
+
+                <div id="speechStatus" class="speech-status"></div>
+            </div>
+
+            <div id="resultSection" class="result-section hidden">
+                <h2>Analysis Results</h2>
+                
+                <div id="predictionCard" class="prediction-card">
+                    <div class="prediction-header">
+                        <span id="predictionLabel" class="prediction-label"></span>
+                        <span id="predictionConfidence" class="prediction-confidence"></span>
+                    </div>
+                    
+                    <div class="probabilities">
+                        <h3>Class Probabilities:</h3>
+                        <div id="probabilityBars" class="probability-bars"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="errorSection" class="error-section hidden">
+                <div class="error-message">
+                    <span class="error-icon">⚠️</span>
+                    <span id="errorText"></span>
+                </div>
+            </div>
+
+            <div id="loadingSection" class="loading-section hidden">
+                <div class="spinner"></div>
+                <p>Analyzing text...</p>
+            </div>
+        </main>
+
+        <footer>
+            <p>Built with Flask & TensorFlow | Bi-MinLSTM Model</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+

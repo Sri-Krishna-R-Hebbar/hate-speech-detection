@@ -1,0 +1,167 @@
+============================================================
+Hate Speech Detection using Bi-MinLSTM
+============================================================
+
+Configuration:
+------------------------------------------------------------
+racist_dataset........... data/twitter_racism_parsed_dataset.csv
+sexist_dataset........... data/twitter_sexism_parsed_dataset.csv
+max_words................ 10000
+max_len.................. 100
+embedding_dim............ 128
+lstm_units............... 64
+num_classes.............. 3
+dropout_rate............. 0.3
+epochs................... 5
+batch_size............... 64
+test_size................ 0.2
+val_size................. 0.1
+random_state............. 42
+------------------------------------------------------------
+
+============================================================
+STEP 1: DATA PREPROCESSING
+============================================================
+Loading datasets...
+Racist dataset shape: (13471, 5)
+Sexist dataset shape: (14881, 5)
+Racist dataset columns: ['index', 'id', 'Text', 'Annotation', 'oh_label']
+Sexist dataset columns: ['index', 'id', 'Text', 'Annotation', 'oh_label']
+
+Combined dataset shape: (28349, 5)
+Label distribution:
+label
+0.0    23002
+1.0     1970
+2.0     3377
+Name: count, dtype: int64
+
+Cleaning text data...
+Dataset shape after cleaning: (27633, 6)
+
+Data split:
+Training samples: 19342
+Validation samples: 2764
+Test samples: 5527
+
+Tokenizing and padding sequences...
+Vocabulary size: 14392
+
+Vocabulary size for model: 10000
+
+============================================================
+STEP 2: MODEL CREATION
+============================================================
+2025-11-13 11:04:37.125787: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE3 SSE4.1 SSE4.2 AVX AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+
+Model Architecture:
+============================================================
+Model: "bi_min_lstm"
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┓
+┃ Layer (type)                         ┃ Output Shape                ┃         Param # ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━┩
+│ embedding (Embedding)                │ ?                           │     0 (unbuilt) │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ spatial_dropout1d (SpatialDropout1D) │ ?                           │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ bidirectional (Bidirectional)        │ ?                           │     0 (unbuilt) │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dropout (Dropout)                    │ ?                           │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dense (Dense)                        │ ?                           │     0 (unbuilt) │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dropout_1 (Dropout)                  │ ?                           │               0 │
+├──────────────────────────────────────┼─────────────────────────────┼─────────────────┤
+│ dense_1 (Dense)                      │ ?                           │     0 (unbuilt) │
+└──────────────────────────────────────┴─────────────────────────────┴─────────────────┘
+ Total params: 0 (0.00 B)
+ Trainable params: 0 (0.00 B)
+ Non-trainable params: 0 (0.00 B)
+============================================================
+
+============================================================
+STEP 3: MODEL TRAINING
+============================================================
+
+============================================================
+Training bi_min_lstm
+============================================================
+
+Epoch 1/5
+2025-11-13 11:04:42.928164: E tensorflow/core/util/util.cc:131] oneDNN supports DT_BOOL only on platforms with AVX-512. Falling back to the default Eigen-based implementation if present.
+303/303 ━━━━━━━━━━━━━━━━━━━━ 0s 93ms/step - accuracy: 0.7986 - loss: 0.6415  
+Epoch 1: val_accuracy improved from None to 0.85962, saving model to models/bi_min_lstm_best.keras
+303/303 ━━━━━━━━━━━━━━━━━━━━ 35s 97ms/step - accuracy: 0.8412 - loss: 0.4904 - val_accuracy: 0.8596 - val_loss: 0.3693 - learning_rate: 0.0010
+Epoch 2/5
+303/303 ━━━━━━━━━━━━━━━━━━━━ 0s 87ms/step - accuracy: 0.9081 - loss: 0.2560  
+Epoch 2: val_accuracy improved from 0.85962 to 0.87880, saving model to models/bi_min_lstm_best.keras
+303/303 ━━━━━━━━━━━━━━━━━━━━ 27s 90ms/step - accuracy: 0.9074 - loss: 0.2517 - val_accuracy: 0.8788 - val_loss: 0.3447 - learning_rate: 0.0010
+Epoch 3/5
+303/303 ━━━━━━━━━━━━━━━━━━━━ 0s 91ms/step - accuracy: 0.9501 - loss: 0.1487  
+Epoch 3: val_accuracy improved from 0.87880 to 0.88169, saving model to models/bi_min_lstm_best.keras
+303/303 ━━━━━━━━━━━━━━━━━━━━ 29s 94ms/step - accuracy: 0.9484 - loss: 0.1518 - val_accuracy: 0.8817 - val_loss: 0.3638 - learning_rate: 0.0010
+Epoch 4/5
+303/303 ━━━━━━━━━━━━━━━━━━━━ 0s 86ms/step - accuracy: 0.9694 - loss: 0.0937  
+Epoch 4: val_accuracy improved from 0.88169 to 0.89038, saving model to models/bi_min_lstm_best.keras
+303/303 ━━━━━━━━━━━━━━━━━━━━ 27s 89ms/step - accuracy: 0.9677 - loss: 0.0963 - val_accuracy: 0.8904 - val_loss: 0.4184 - learning_rate: 0.0010
+Epoch 5/5
+303/303 ━━━━━━━━━━━━━━━━━━━━ 0s 86ms/step - accuracy: 0.9802 - loss: 0.0642 
+Epoch 5: val_accuracy improved from 0.89038 to 0.89291, saving model to models/bi_min_lstm_best.keras
+
+Epoch 5: ReduceLROnPlateau reducing learning rate to 0.0005000000237487257.
+303/303 ━━━━━━━━━━━━━━━━━━━━ 27s 89ms/step - accuracy: 0.9776 - loss: 0.0706 - val_accuracy: 0.8929 - val_loss: 0.4663 - learning_rate: 0.0010
+Restoring model weights from the end of the best epoch: 2.
+
+============================================================
+Training completed for bi_min_lstm
+============================================================
+
+Model saved: models/bi_min_lstm_final.keras
+
+============================================================
+STEP 4: MODEL EVALUATION
+============================================================
+
+============================================================
+Evaluating Bi-MinLSTM
+============================================================
+
+173/173 ━━━━━━━━━━━━━━━━━━━━ 2s 13ms/step - accuracy: 0.8724 - loss: 0.3689
+
+Test Loss: 0.3689
+Test Accuracy: 0.8724
+
+============================================================
+STEP 5: GENERATING VISUALIZATIONS AND METRICS
+============================================================
+
+Generating plots and metrics...
+Training history plot saved: plots/bi_min_lstm_training_history.png
+Confusion matrix saved: plots/bi_min_lstm_confusion_matrix.png
+Metrics saved: plots/bi_min_lstm_metrics.txt
+
+============================================================
+Bi-MinLSTM - Results Summary
+============================================================
+Accuracy:       0.8724
+Precision:      0.7625
+Recall:         0.7184
+F1-Score:       0.7335
+============================================================
+
+
+============================================================
+PROJECT COMPLETED SUCCESSFULLY
+============================================================
+
+Generated files:
+  Models:
+    - models/bi_min_lstm_best.keras
+    - models/bi_min_lstm_final.keras
+  Plots:
+    - plots/bi_min_lstm_training_history.png
+    - plots/bi_min_lstm_confusion_matrix.png
+  Metrics:
+    - plots/bi_min_lstm_metrics.txt
+============================================================

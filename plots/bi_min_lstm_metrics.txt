@@ -1,0 +1,51 @@
+============================================================
+bi_min_lstm - Evaluation Metrics
+============================================================
+
+Overall Accuracy: 0.8724
+
+Macro Averaged Metrics:
+  Precision: 0.7625
+  Recall: 0.7184
+  F1-Score: 0.7335
+
+Weighted Averaged Metrics:
+  Precision: 0.8672
+  Recall: 0.8724
+  F1-Score: 0.8671
+
+============================================================
+Per-Class Metrics:
+============================================================
+
+None:
+  Precision: 0.9072
+  Recall: 0.9420
+  F1-Score: 0.9243
+  Support: 4464
+
+Racist:
+  Precision: 0.6549
+  Recall: 0.7081
+  F1-Score: 0.6805
+  Support: 394
+
+Sexist:
+  Precision: 0.7253
+  Recall: 0.5052
+  F1-Score: 0.5956
+  Support: 669
+
+============================================================
+Classification Report:
+============================================================
+
+              precision    recall  f1-score   support
+
+        None       0.91      0.94      0.92      4464
+      Racist       0.65      0.71      0.68       394
+      Sexist       0.73      0.51      0.60       669
+
+    accuracy                           0.87      5527
+   macro avg       0.76      0.72      0.73      5527
+weighted avg       0.87      0.87      0.87      5527

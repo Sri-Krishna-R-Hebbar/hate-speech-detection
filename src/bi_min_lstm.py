@@ -5,17 +5,14 @@ import numpy as np
 
 # Check Keras version for compatibility
 try:
-    # Keras 3.x
     from keras.saving import register_keras_serializable
     KERAS_3 = True
 except (ImportError, AttributeError):
-    # Keras 2.x (TensorFlow 2.x)
     try:
         from tensorflow.keras.utils import register_keras_serializable
         KERAS_3 = False
     except ImportError:
-        # Older TensorFlow versions - use custom_objects instead
-        register_keras_serializable = lambda: lambda cls: cls
+        register_keras_serializable = lambda package="Custom", name=None: lambda cls: cls
         KERAS_3 = False
 
 
@@ -107,23 +104,18 @@ class MinLSTMCell(layers.Layer):
         return h, [h, c]
     
     def get_initial_state(self, inputs=None, batch_size=None, dtype=None):
-        # Handle None dtype by defaulting to float32
         if dtype is None:
             dtype = tf.float32
         return [tf.zeros((batch_size, self.units), dtype=dtype),
                 tf.zeros((batch_size, self.units), dtype=dtype)]
     
     def get_config(self):
-        """Return config for serialization"""
         config = super(MinLSTMCell, self).get_config()
-        config.update({
-            'units': self.units,
-        })
+        config.update({'units': self.units})
         return config
     
     @classmethod
     def from_config(cls, config):
-        """Create layer from config"""
         return cls(**config)
 
 
@@ -134,17 +126,6 @@ class BiMinLSTM(Model):
     """
     def __init__(self, vocab_size, embedding_dim=128, lstm_units=64, num_classes=3, 
                  max_len=100, dropout_rate=0.3, **kwargs):
-        """
-        Initialize Bi-MinLSTM model
-        
-        Args:
-            vocab_size: Size of vocabulary
-            embedding_dim: Dimension of word embeddings
-            lstm_units: Number of LSTM units
-            num_classes: Number of output classes
-            max_len: Maximum sequence length
-            dropout_rate: Dropout rate for regularization
-        """
         super(BiMinLSTM, self).__init__(**kwargs)
         
         self.vocab_size = vocab_size
@@ -159,43 +140,44 @@ class BiMinLSTM(Model):
             input_dim=vocab_size,
             output_dim=embedding_dim,
             input_length=max_len,
-            mask_zero=True
+            mask_zero=True,
+            name='embedding'
         )
         
         # Spatial Dropout for embeddings
-        self.spatial_dropout = layers.SpatialDropout1D(dropout_rate)
+        self.spatial_dropout = layers.SpatialDropout1D(dropout_rate, name='spatial_dropout')
         
         # Bidirectional MinLSTM layer
         self.bi_minlstm = layers.Bidirectional(
             layers.RNN(MinLSTMCell(lstm_units), return_sequences=False),
-            merge_mode='concat'
+            merge_mode='concat',
+            name='bidirectional_minlstm'
         )
         
         # Dropout layer
-        self.dropout = layers.Dropout(dropout_rate)
+        self.dropout1 = layers.Dropout(dropout_rate, name='dropout_1')
         
         # Dense layer
-        self.dense = layers.Dense(32, activation='relu')
+        self.dense1 = layers.Dense(32, activation='relu', name='dense_1')
         
         # Dropout layer
-        self.dropout2 = layers.Dropout(dropout_rate)
+        self.dropout2 = layers.Dropout(dropout_rate, name='dropout_2')
         
         # Output layer
-        self.output_layer = layers.Dense(num_classes, activation='softmax')
+        self.output_layer = layers.Dense(num_classes, activation='softmax', name='output')
     
     def call(self, inputs, training=False):
         """Forward pass"""
         x = self.embedding(inputs)
         x = self.spatial_dropout(x, training=training)
         x = self.bi_minlstm(x, training=training)
-        x = self.dropout(x, training=training)
-        x = self.dense(x)
+        x = self.dropout1(x, training=training)
+        x = self.dense1(x)
         x = self.dropout2(x, training=training)
         output = self.output_layer(x)
         return output
     
     def get_config(self):
-        """Return config for serialization"""
         config = super(BiMinLSTM, self).get_config()
         config.update({
             'vocab_size': self.vocab_size,
@@ -209,13 +191,7 @@ class BiMinLSTM(Model):
     
     @classmethod
     def from_config(cls, config):
-        """Create model from config"""
         return cls(**config)
-    
-    def model(self):
-        """Build and return the model"""
-        x = keras.Input(shape=(self.max_len,))
-        return Model(inputs=[x], outputs=self.call(x))
 
 
 def create_bi_min_lstm_model(vocab_size, embedding_dim=128, lstm_units=64, 
@@ -250,8 +226,11 @@ def create_bi_min_lstm_model(vocab_size, embedding_dim=128, lstm_units=64,
         metrics=['accuracy']
     )
     
-    # Build the model
-    model.build(input_shape=(None, max_len))
+    # Build the model by passing dummy data through it with batch size > 1
+    print("\nBuilding model layers...")
+    dummy_input = tf.zeros((2, max_len), dtype=tf.int32)  # Use batch_size=2 to properly build all layers
+    _ = model(dummy_input, training=False)
+    print("Model layers built successfully!")
     
     print("\nModel Architecture:")
     print("="*60)
@@ -261,13 +240,124 @@ def create_bi_min_lstm_model(vocab_size, embedding_dim=128, lstm_units=64,
     return model
 
 
-# Custom objects for model loading (backward compatibility)
 def get_custom_objects():
     """
     Return custom objects dictionary for model loading
-    Useful for loading saved models
     """
     return {
         'MinLSTMCell': MinLSTMCell,
         'BiMinLSTM': BiMinLSTM,
     }
+
+
+def predict_text(model, text, preprocessor, class_names=['None', 'Racist', 'Sexist']):
+    """
+    Predict hate speech class for a given text
+    
+    Args:
+        model: Trained model
+        text: Input text string
+        preprocessor: DataPreprocessor instance with fitted tokenizer
+        class_names: List of class names
+        
+    Returns:
+        Dictionary with prediction results
+    """
+    from tensorflow.keras.preprocessing.sequence import pad_sequences
+    
+    # Clean the text
+    cleaned = preprocessor.clean_text(text)
+    
+    # Tokenize and pad
+    sequence = preprocessor.tokenizer.texts_to_sequences([cleaned])
+    padded = pad_sequences(
+        sequence, 
+        maxlen=preprocessor.max_len, 
+        padding='post', 
+        truncating='post'
+    )
+    
+    # Predict
+    probabilities = model.predict(padded, verbose=0)[0]
+    predicted_class = np.argmax(probabilities)
+    confidence = probabilities[predicted_class]
+    
+    return {
+        'text': text,
+        'cleaned_text': cleaned,
+        'predicted_class': class_names[predicted_class],
+        'predicted_label': int(predicted_class),
+        'confidence': float(confidence),
+        'probabilities': {
+            class_names[i]: float(probabilities[i]) 
+            for i in range(len(class_names))
+        }
+    }
+
+
+def test_model_predictions(model, preprocessor, class_names=['None', 'Racist', 'Sexist']):
+    """
+    Test the model with sample texts from each class
+    
+    Args:
+        model: Trained model
+        preprocessor: DataPreprocessor instance
+        class_names: List of class names
+    """
+    print("\n" + "="*60)
+    print("TESTING MODEL WITH SAMPLE TEXTS")
+    print("="*60 + "\n")
+    
+    # Test samples - 2 from each class
+    test_samples = [
+        # None (neutral) class
+        "I love spending time with my family on weekends",
+        "The weather is beautiful today perfect for a walk in the park",
+        
+        # Racist class
+        "People from that country are all the same and inferior to us",
+        "That ethnic group does not belong here and should go back",
+        
+        # Sexist class  
+        "Women are not smart enough for leadership positions at all",
+        "She only got that job because she is a woman not merit",
+    ]
+    
+    expected_classes = [0, 0, 1, 1, 2, 2]  # Expected labels for each sample
+    
+    correct_predictions = 0
+    
+    print("Running predictions on test samples...\n")
+    
+    for i, (text, expected) in enumerate(zip(test_samples, expected_classes)):
+        result = predict_text(model, text, preprocessor, class_names)
+        
+        is_correct = result['predicted_label'] == expected
+        if is_correct:
+            correct_predictions += 1
+            status = "CORRECT ✓"
+        else:
+            status = "WRONG ✗"
+        
+        print(f"{'='*60}")
+        print(f"Test {i+1}/6: {status}")
+        print(f"{'='*60}")
+        print(f"Original Text:")
+        print(f'  "{text}"')
+        print(f"\nCleaned Text:")
+        print(f'  "{result["cleaned_text"]}"')
+        print(f"\nPrediction:")
+        print(f"  Expected Class:  {class_names[expected]}")
+        print(f"  Predicted Class: {result['predicted_class']}")
+        print(f"  Confidence:      {result['confidence']:.2%}")
+        print(f"\nClass Probabilities:")
+        for cls_name, prob in result['probabilities'].items():
+            bar_length = int(prob * 40)
+            bar = '█' * bar_length + '░' * (40 - bar_length)
+            print(f"  {cls_name:8s} [{bar}] {prob:.4f}")
+        print()
+    
+    print("="*60)
+    accuracy = correct_predictions / len(test_samples)
+    print(f"Overall Test Accuracy: {correct_predictions}/{len(test_samples)} ({accuracy:.1%})")
+    print("="*60 + "\n")

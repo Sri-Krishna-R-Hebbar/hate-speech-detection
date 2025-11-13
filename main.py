@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 sys.path.append('src')
 
 from data_preprocessing import DataPreprocessor
-from bi_min_lstm import create_bi_min_lstm_model
+from bi_min_lstm import create_bi_min_lstm_model, test_model_predictions
 from train import train_model
 from evaluate import evaluate_model
 from utils import (create_directories, plot_training_history, 
@@ -39,7 +39,7 @@ def main():
         'lstm_units': 64,
         'num_classes': 3,
         'dropout_rate': 0.3,
-        'epochs': 5,
+        'epochs': 50,
         'batch_size': 64,
         'test_size': 0.2,
         'val_size': 0.1,
@@ -134,6 +134,13 @@ def main():
     # Save and print metrics
     metrics = save_metrics(y_test, y_pred, CLASS_NAMES, 'bi_min_lstm')
     print_metrics_summary(metrics, 'Bi-MinLSTM')
+    
+    # Step 6: Test with Sample Texts
+    print("\n" + "="*60)
+    print("STEP 6: TESTING WITH SAMPLE TEXTS")
+    print("="*60)
+    
+    test_model_predictions(model, preprocessor, CLASS_NAMES)
     
     # Final Summary
     print("\n" + "="*60)

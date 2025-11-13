@@ -2,39 +2,39 @@
 bi_min_lstm - Evaluation Metrics
 ============================================================
 
-Overall Accuracy: 0.8724
+Overall Accuracy: 0.8886
 
 Macro Averaged Metrics:
-  Precision: 0.7625
-  Recall: 0.7184
-  F1-Score: 0.7335
+  Precision: 0.7957
+  Recall: 0.7482
+  F1-Score: 0.7666
 
 Weighted Averaged Metrics:
-  Precision: 0.8672
-  Recall: 0.8724
-  F1-Score: 0.8671
+  Precision: 0.8851
+  Recall: 0.8886
+  F1-Score: 0.8848
 
 ============================================================
 Per-Class Metrics:
 ============================================================
 
 None:
-  Precision: 0.9072
-  Recall: 0.9420
-  F1-Score: 0.9243
-  Support: 4464
+  Precision: 0.9177
+  Recall: 0.9501
+  F1-Score: 0.9336
+  Support: 4509
 
 Racist:
-  Precision: 0.6549
-  Recall: 0.7081
-  F1-Score: 0.6805
+  Precision: 0.6861
+  Recall: 0.7157
+  F1-Score: 0.7006
   Support: 394
 
 Sexist:
-  Precision: 0.7253
-  Recall: 0.5052
-  F1-Score: 0.5956
-  Support: 669
+  Precision: 0.7831
+  Recall: 0.5786
+  F1-Score: 0.6655
+  Support: 674
 
 ============================================================
 Classification Report:
@@ -42,10 +42,10 @@ Classification Report:
 
               precision    recall  f1-score   support
 
-        None       0.91      0.94      0.92      4464
-      Racist       0.65      0.71      0.68       394
-      Sexist       0.73      0.51      0.60       669
+        None       0.92      0.95      0.93      4509
+      Racist       0.69      0.72      0.70       394
+      Sexist       0.78      0.58      0.67       674
 
-    accuracy                           0.87      5527
-   macro avg       0.76      0.72      0.73      5527
-weighted avg       0.87      0.87      0.87      5527
+    accuracy                           0.89      5577
+   macro avg       0.80      0.75      0.77      5577
+weighted avg       0.89      0.89      0.88      5577

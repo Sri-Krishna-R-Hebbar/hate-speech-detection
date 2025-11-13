@@ -25,10 +25,79 @@ class DataPreprocessor:
         self.max_words = max_words
         self.max_len = max_len
         self.tokenizer = None
-        self.stop_words = set(stopwords.words('english'))
+        
+        # MINIMAL stopword removal - only remove truly useless words
+        # Keep ALL words that could be important for hate speech detection
+        all_stopwords = set(stopwords.words('english'))
+        
+        # Words to DEFINITELY KEEP (critical for hate speech detection)
+        keep_words = {
+            # NEGATIONS - ABSOLUTELY CRITICAL!
+            'not', 'no', 'nor', 'neither', 'never', 'none', 'nothing', 'nowhere',
+            'nobody', 'noone', 
+            
+            # Negation contractions
+            'ain', 'aren', 'couldn', 'didn', 'doesn', 'hadn', 'hasn', 'haven',
+            'isn', 'mightn', 'mustn', 'needn', 'shan', 'shouldn', 'wasn', 'weren',
+            'won', 'wouldn', 'don', 'aren\'t', 'can\'t', 'couldn\'t', 'didn\'t',
+            'doesn\'t', 'don\'t', 'hadn\'t', 'hasn\'t', 'haven\'t', 'isn\'t',
+            'mustn\'t', 'needn\'t', 'shan\'t', 'shouldn\'t', 'wasn\'t', 'weren\'t',
+            'won\'t', 'wouldn\'t',
+            
+            # QUANTIFIERS - Show intensity/scope
+            'all', 'every', 'any', 'some', 'most', 'few', 'more', 'less', 'least',
+            'much', 'many', 'only', 'just', 'too', 'very', 'so', 'enough', 'such',
+            'same', 'other', 'another', 'both', 'each', 'either',
+            
+            # PRONOUNS - Identify targets
+            'she', 'he', 'her', 'him', 'his', 'hers', 'they', 'them', 'their',
+            'theirs', 'who', 'whom', 'whose', 'which', 'what', 'whoever',
+            'whomever', 'you', 'your', 'yours', 'we', 'our', 'ours',
+            
+            # MODAL VERBS - Show assertions/requirements
+            'should', 'would', 'could', 'can', 'will', 'must', 'might', 'may',
+            'shall', 'ought',
+            
+            # PREPOSITIONS - Show relationships
+            'from', 'to', 'for', 'with', 'against', 'about', 'like', 'as',
+            'at', 'by', 'in', 'on', 'of', 'off', 'over', 'under', 'between',
+            'among', 'through', 'during', 'before', 'after', 'above', 'below',
+            
+            # CONJUNCTIONS - Connect ideas
+            'and', 'or', 'but', 'because', 'if', 'when', 'where', 'while',
+            'than', 'since', 'unless', 'until', 'whether', 'though', 'although',
+            
+            # VERBS - Actions/states
+            'are', 'is', 'was', 'were', 'been', 'being', 'have', 'has', 'had',
+            'do', 'does', 'did', 'having', 'doing', 'am',
+            
+            # ADVERBS - Modify meaning
+            'how', 'why', 'here', 'there', 'now', 'then', 'always', 'never',
+            'often', 'sometimes', 'usually', 'really', 'quite', 'rather',
+            
+            # DETERMINERS
+            'the', 'a', 'an', 'this', 'that', 'these', 'those',
+            
+            # OTHER IMPORTANT
+            'as', 'well', 'back', 'even', 'still', 'also', 'own', 'same',
+            'different', 'new', 'old', 'good', 'bad', 'first', 'last'
+        }
+        
+        # Only remove TRULY useless stopwords (articles, etc that don't add meaning)
+        useless_stopwords = {
+            'i', 'me', 'my', 'myself', 'ours', 'ourselves', 'yourselves',
+            'himself', 'herself', 'itself', 'themselves', 
+            'again', 'further', 'once', 'down', 'out', 'up',
+        }
+        
+        # Final stopwords: only the truly useless ones
+        self.stop_words = useless_stopwords
+        
+        print(f"[DEBUG] Using MINIMAL stopword removal: {len(self.stop_words)} words")
+        print(f"[DEBUG] Keeping {len(keep_words)} critical words")
         
     def clean_text(self, text):
-        """Clean and preprocess text data"""
+        """Clean and preprocess text data while preserving ALL important context"""
         if pd.isna(text):
             return ""
         
@@ -38,20 +107,90 @@ class DataPreprocessor:
         # Remove URLs
         text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
         
-        # Remove user mentions and hashtags
-        text = re.sub(r'@\w+|#\w+', '', text)
+        # Remove user mentions
+        text = re.sub(r'@\w+', '', text)
+        
+        # Remove hashtag symbols but keep the word
+        text = re.sub(r'#(\w+)', r'\1', text)
         
         # Remove RT (retweet)
         text = re.sub(r'\brt\b', '', text)
         
-        # Remove special characters and numbers
+        # CRITICAL: Expand contractions to preserve negations
+        contractions = {
+            "ain't": "am not", "aren't": "are not", "can't": "cannot",
+            "can't've": "cannot have", "could've": "could have",
+            "couldn't": "could not", "couldn't've": "could not have",
+            "didn't": "did not", "doesn't": "does not", "don't": "do not",
+            "hadn't": "had not", "hadn't've": "had not have",
+            "hasn't": "has not", "haven't": "have not",
+            "he'd": "he would", "he'd've": "he would have",
+            "he'll": "he will", "he'll've": "he will have",
+            "he's": "he is", "how'd": "how did",
+            "how'd'y": "how do you", "how'll": "how will",
+            "how's": "how is", "i'd": "i would",
+            "i'd've": "i would have", "i'll": "i will",
+            "i'll've": "i will have", "i'm": "i am",
+            "i've": "i have", "isn't": "is not",
+            "it'd": "it would", "it'd've": "it would have",
+            "it'll": "it will", "it'll've": "it will have",
+            "it's": "it is", "let's": "let us",
+            "ma'am": "madam", "mayn't": "may not",
+            "might've": "might have", "mightn't": "might not",
+            "mightn't've": "might not have", "must've": "must have",
+            "mustn't": "must not", "mustn't've": "must not have",
+            "needn't": "need not", "needn't've": "need not have",
+            "o'clock": "of the clock", "oughtn't": "ought not",
+            "oughtn't've": "ought not have", "shan't": "shall not",
+            "sha'n't": "shall not", "shan't've": "shall not have",
+            "she'd": "she would", "she'd've": "she would have",
+            "she'll": "she will", "she'll've": "she will have",
+            "she's": "she is", "should've": "should have",
+            "shouldn't": "should not", "shouldn't've": "should not have",
+            "so've": "so have", "so's": "so is",
+            "that'd": "that would", "that'd've": "that would have",
+            "that's": "that is", "there'd": "there would",
+            "there'd've": "there would have", "there's": "there is",
+            "they'd": "they would", "they'd've": "they would have",
+            "they'll": "they will", "they'll've": "they will have",
+            "they're": "they are", "they've": "they have",
+            "to've": "to have", "wasn't": "was not",
+            "we'd": "we would", "we'd've": "we would have",
+            "we'll": "we will", "we'll've": "we will have",
+            "we're": "we are", "we've": "we have",
+            "weren't": "were not", "what'll": "what will",
+            "what'll've": "what will have", "what're": "what are",
+            "what's": "what is", "what've": "what have",
+            "when's": "when is", "when've": "when have",
+            "where'd": "where did", "where's": "where is",
+            "where've": "where have", "who'll": "who will",
+            "who'll've": "who will have", "who's": "who is",
+            "who've": "who have", "why's": "why is",
+            "why've": "why have", "will've": "will have",
+            "won't": "will not", "won't've": "will not have",
+            "would've": "would have", "wouldn't": "would not",
+            "wouldn't've": "would not have", "y'all": "you all",
+            "y'all'd": "you all would", "y'all'd've": "you all would have",
+            "y'all're": "you all are", "y'all've": "you all have",
+            "you'd": "you would", "you'd've": "you would have",
+            "you'll": "you will", "you'll've": "you will have",
+            "you're": "you are", "you've": "you have"
+        }
+        
+        # Apply contractions
+        for contraction, expansion in contractions.items():
+            text = text.replace(contraction, expansion)
+        
+        # Remove special characters and numbers but keep spaces
         text = re.sub(r'[^a-zA-Z\s]', '', text)
         
         # Remove extra whitespace
         text = re.sub(r'\s+', ' ', text).strip()
         
-        # Remove stopwords
-        text = ' '.join([word for word in text.split() if word not in self.stop_words])
+        # MINIMAL stopword removal - only remove truly useless words
+        words = text.split()
+        filtered_words = [word for word in words if word not in self.stop_words]
+        text = ' '.join(filtered_words)
         
         return text
     
@@ -79,8 +218,7 @@ class DataPreprocessor:
         print(f"Racist dataset columns: {df_racist.columns.tolist()}")
         print(f"Sexist dataset columns: {df_sexist.columns.tolist()}")
         
-        # Standardize column names - handle different possible formats
-        # Expected columns: 'Text' and 'Annotation_oh_label' OR 'label'
+        # Standardize column names
         column_mapping = {}
         
         # Handle text column

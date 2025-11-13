@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hate Speech Detection - Bi-MinLSTM</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <i class="fas fa-shield-alt header-icon"></i>
+                <h1>Hate Speech Detection</h1>
+                <p class="subtitle">Powered by Bidirectional Minimal LSTM</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Input Section -->
+            <div class="input-section">
+                <div class="card">
+                    <h2><i class="fas fa-pen"></i> Enter Text or Speak</h2>
+                    
+                    <!-- Tab Selection -->
+                    <div class="tabs">
+                        <button class="tab-btn active" onclick="switchTab('text')">
+                            <i class="fas fa-keyboard"></i> Type Text
+                        </button>
+                        <button class="tab-btn" onclick="switchTab('speech')">
+                            <i class="fas fa-microphone"></i> Speech Input
+                        </button>
+                    </div>
+
+                    <!-- Text Input Tab -->
+                    <div id="text-tab" class="tab-content active">
+                        <textarea 
+                            id="text-input" 
+                            placeholder="Type or paste text here to check for hate speech...&#10;&#10;Examples:&#10;• I love spending time with my family&#10;• Women are not capable of leadership&#10;• That ethnic group should go back"
+                            rows="6"
+                        ></textarea>
+                        <button class="btn btn-primary" onclick="analyzeText()">
+                            <i class="fas fa-search"></i> Analyze Text
+                        </button>
+                    </div>
+
+                    <!-- Speech Input Tab -->
+                    <div id="speech-tab" class="tab-content">
+                        <div class="speech-container">
+                            <button id="record-btn" class="btn btn-record" onclick="toggleRecording()">
+                                <i class="fas fa-microphone"></i>
+                                <span id="record-text">Click to Start Recording</span>
+                            </button>
+                            <div id="recording-indicator" class="recording-indicator hidden">
+                                <div class="pulse"></div>
+                                <span>Recording...</span>
+                            </div>
+                            <p class="speech-note">
+                                <i class="fas fa-info-circle"></i> 
+                                Click the button and speak clearly. Click again to stop and analyze.
+                            </p>
+                            <div id="transcribed-text-container" class="transcribed-text hidden">
+                                <strong>Transcribed Text:</strong>
+                                <p id="transcribed-text"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Loading Spinner -->
+                    <div id="loading" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p>Analyzing...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section">
+                <div class="card">
+                    <h2><i class="fas fa-chart-bar"></i> Analysis Results</h2>
+                    
+                    <div id="no-results" class="no-results">
+                        <i class="fas fa-clipboard-list"></i>
+                        <p>No analysis yet. Enter text or use speech input to get started.</p>
+                    </div>
+
+                    <div id="results-container" class="results-container hidden">
+                        <!-- Input Text Display -->
+                        <div class="result-item">
+                            <h3><i class="fas fa-file-alt"></i> Input Text</h3>
+                            <div class="input-text-display" id="input-text-display"></div>
+                        </div>
+
+                        <!-- Prediction Result -->
+                        <div class="result-item prediction-result">
+                            <h3><i class="fas fa-bullseye"></i> Prediction</h3>
+                            <div class="prediction-badge" id="prediction-badge">
+                                <span class="prediction-label" id="prediction-label"></span>
+                                <span class="confidence-badge" id="confidence-badge"></span>
+                            </div>
+                        </div>
+
+                        <!-- Class Probabilities -->
+                        <div class="result-item">
+                            <h3><i class="fas fa-percentage"></i> Class Probabilities</h3>
+                            <div class="probabilities-container">
+                                <div class="probability-item">
+                                    <div class="probability-header">
+                                        <span class="probability-label">
+                                            <i class="fas fa-check-circle"></i> None (Safe)
+                                        </span>
+                                        <span class="probability-value" id="prob-none">0%</span>
+                                    </div>
+                                    <div class="probability-bar">
+                                        <div class="probability-fill safe" id="bar-none" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="probability-item">
+                                    <div class="probability-header">
+                                        <span class="probability-label">
+                                            <i class="fas fa-exclamation-triangle"></i> Racist
+                                        </span>
+                                        <span class="probability-value" id="prob-racist">0%</span>
+                                    </div>
+                                    <div class="probability-bar">
+                                        <div class="probability-fill racist" id="bar-racist" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="probability-item">
+                                    <div class="probability-header">
+                                        <span class="probability-label">
+                                            <i class="fas fa-exclamation-triangle"></i> Sexist
+                                        </span>
+                                        <span class="probability-value" id="prob-sexist">0%</span>
+                                    </div>
+                                    <div class="probability-bar">
+                                        <div class="probability-fill sexist" id="bar-sexist" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary" onclick="clearResults()">
+                                <i class="fas fa-redo"></i> Clear & Analyze New Text
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Error Display -->
+                    <div id="error-message" class="error-message hidden">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p id="error-text"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>
+                <i class="fas fa-robot"></i> 
+                Powered by Bidirectional Minimal LSTM Neural Network
+            </p>
+            <p class="footer-note">
+                Model trained on 27,633 Twitter samples with 87.74% validation accuracy
+            </p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

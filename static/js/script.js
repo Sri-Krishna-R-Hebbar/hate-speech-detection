@@ -1,7 +1,7 @@
 // Global variables
-let mediaRecorder;
-let audioChunks = [];
+let recognition = null;
 let isRecording = false;
+let finalTranscript = '';
 
 // Switch between tabs
 function switchTab(tabName) {
@@ -59,103 +59,151 @@ async function analyzeText() {
     }
 }
 
-// Toggle recording
-async function toggleRecording() {
-    if (!isRecording) {
-        await startRecording();
-    } else {
-        await stopRecording();
+// Initialize Speech Recognition
+function initSpeechRecognition() {
+    // Check if browser supports speech recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+        const recordBtn = document.getElementById('record-btn');
+        recordBtn.disabled = true;
+        recordBtn.innerHTML = '<i class="fas fa-microphone-slash"></i> <span>Speech Not Supported</span>';
+        showError('Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.');
+        return false;
     }
-}
-
-// Start recording
-async function startRecording() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        
-        mediaRecorder.ondataavailable = (event) => {
-            audioChunks.push(event.data);
-        };
-        
-        mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-            await analyzeSpeech(audioBlob);
-            
-            // Stop all tracks
-            stream.getTracks().forEach(track => track.stop());
-        };
-        
-        mediaRecorder.start();
+    
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = function() {
         isRecording = true;
-        
-        // Update UI
         const recordBtn = document.getElementById('record-btn');
         const recordText = document.getElementById('record-text');
         recordBtn.classList.add('recording');
         recordText.textContent = 'Click to Stop Recording';
         document.getElementById('recording-indicator').classList.remove('hidden');
+    };
+    
+    recognition.onresult = function(event) {
+        let interimTranscript = '';
+        finalTranscript = ''; // Reset and rebuild
         
-    } catch (error) {
-        showError('Microphone access denied or not available');
-        console.error('Error accessing microphone:', error);
+        for (let i = 0; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+                finalTranscript += transcript + ' ';
+            } else {
+                interimTranscript += transcript;
+            }
+        }
+        
+        // Show transcribed text (both final and interim)
+        const transcribedContainer = document.getElementById('transcribed-text-container');
+        const transcribedText = document.getElementById('transcribed-text');
+        
+        const displayText = (finalTranscript + interimTranscript).trim();
+        if (displayText) {
+            transcribedText.textContent = displayText;
+            transcribedContainer.classList.remove('hidden');
+        }
+    };
+    
+    recognition.onerror = function(event) {
+        console.error('Speech recognition error:', event.error);
+        let errorMsg = 'Speech recognition error occurred.';
+        
+        if (event.error === 'no-speech') {
+            errorMsg = 'No speech detected. Please try again.';
+        } else if (event.error === 'audio-capture') {
+            errorMsg = 'Microphone not found. Please check your microphone.';
+        } else if (event.error === 'not-allowed') {
+            errorMsg = 'Microphone permission denied. Please allow microphone access.';
+        } else if (event.error === 'network') {
+            errorMsg = 'Network error. Please check your connection.';
+        }
+        
+        showError(errorMsg);
+        stopRecording();
+    };
+    
+    recognition.onend = function() {
+        if (isRecording) {
+            // Automatically restart if still recording (for continuous mode)
+            try {
+                recognition.start();
+            } catch (e) {
+                // Recognition already started or error - stop recording
+                isRecording = false;
+                const recordBtn = document.getElementById('record-btn');
+                const recordText = document.getElementById('record-text');
+                recordBtn.classList.remove('recording');
+                recordText.textContent = 'Click to Start Recording';
+                document.getElementById('recording-indicator').classList.add('hidden');
+            }
+        }
+        // Note: processFinalTranscript will be called from stopRecording
+    };
+    
+    return true;
+}
+
+// Toggle recording
+function toggleRecording() {
+    if (!recognition) {
+        if (!initSpeechRecognition()) {
+            return;
+        }
+    }
+    
+    if (isRecording) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+// Start recording
+function startRecording() {
+    try {
+        recognition.start();
+    } catch (e) {
+        console.error('Error starting recognition:', e);
+        showError('Error starting speech recognition. Please try again.');
+    }
+}
+
+// Process final transcript after recording stops
+function processFinalTranscript() {
+    const transcribedText = document.getElementById('transcribed-text').textContent.trim();
+    if (transcribedText) {
+        // Put text in the text input and analyze
+        document.getElementById('text-input').value = transcribedText;
+        analyzeText();
+    } else {
+        showError('No speech was detected. Please try speaking again.');
     }
 }
 
 // Stop recording
-async function stopRecording() {
-    if (mediaRecorder && isRecording) {
-        mediaRecorder.stop();
-        isRecording = false;
-        
-        // Update UI
-        const recordBtn = document.getElementById('record-btn');
-        const recordText = document.getElementById('record-text');
-        recordBtn.classList.remove('recording');
-        recordText.textContent = 'Click to Start Recording';
-        document.getElementById('recording-indicator').classList.add('hidden');
-        
-        // Show loading while processing
-        showLoading();
-    }
-}
-
-// Analyze speech
-async function analyzeSpeech(audioBlob) {
-    hideError();
+function stopRecording() {
+    if (!isRecording) return; // Already stopped
     
-    try {
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'recording.wav');
-        
-        const response = await fetch('/predict_speech', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            // Show transcribed text
-            if (data.transcribed_text) {
-                const transcribedContainer = document.getElementById('transcribed-text-container');
-                const transcribedText = document.getElementById('transcribed-text');
-                transcribedText.textContent = data.transcribed_text;
-                transcribedContainer.classList.remove('hidden');
-            }
-            
-            displayResults(data);
-        } else {
-            showError(data.error || 'Failed to process speech');
-        }
-    } catch (error) {
-        showError('Failed to analyze speech. Please try again.');
-        console.error('Error:', error);
-    } finally {
-        hideLoading();
+    isRecording = false;
+    if (recognition) {
+        recognition.stop();
     }
+    
+    // Update UI immediately
+    const recordBtn = document.getElementById('record-btn');
+    const recordText = document.getElementById('record-text');
+    recordBtn.classList.remove('recording');
+    recordText.textContent = 'Click to Start Recording';
+    document.getElementById('recording-indicator').classList.add('hidden');
+    
+    // Wait a moment for final transcript to be processed, then analyze
+    setTimeout(processFinalTranscript, 800);
 }
 
 // Display results
@@ -249,14 +297,24 @@ function hideError() {
     document.getElementById('error-message').classList.add('hidden');
 }
 
-// Allow Enter key to submit (Ctrl+Enter for new line)
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    const textInput = document.getElementById('text-input');
+    // Initialize speech recognition
+    initSpeechRecognition();
     
+    // Allow Enter key to submit (Ctrl+Enter for new line)
+    const textInput = document.getElementById('text-input');
     textInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
             e.preventDefault();
             analyzeText();
+        }
+    });
+    
+    // Stop recording when page is unloaded
+    window.addEventListener('beforeunload', function() {
+        if (isRecording && recognition) {
+            recognition.stop();
         }
     });
 });

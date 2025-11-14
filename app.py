@@ -3,8 +3,6 @@ import os
 import sys
 import numpy as np
 from tensorflow import keras
-import speech_recognition as sr
-from io import BytesIO
 
 # Add src to path
 sys.path.append('src')
@@ -132,60 +130,8 @@ def predict():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/predict_speech', methods=['POST'])
-def predict_speech():
-    """Handle speech-to-text and prediction"""
-    try:
-        # Check if audio file is present
-        if 'audio' not in request.files:
-            return jsonify({'error': 'No audio file provided'}), 400
-        
-        audio_file = request.files['audio']
-        
-        # Initialize recognizer
-        recognizer = sr.Recognizer()
-        
-        # Convert audio to text
-        try:
-            # Save audio temporarily
-            audio_data = audio_file.read()
-            audio_file_like = BytesIO(audio_data)
-            
-            # Try to recognize using Google Speech Recognition
-            with sr.AudioFile(audio_file_like) as source:
-                audio = recognizer.record(source)
-                text = recognizer.recognize_google(audio)
-                
-        except sr.UnknownValueError:
-            return jsonify({'error': 'Could not understand audio'}), 400
-        except sr.RequestError as e:
-            return jsonify({'error': f'Speech recognition error: {str(e)}'}), 500
-        except Exception as e:
-            # If direct conversion fails, try alternative method
-            # Save to temporary wav file
-            import tempfile
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
-                tmp_file.write(audio_data)
-                tmp_file_path = tmp_file.name
-            
-            try:
-                with sr.AudioFile(tmp_file_path) as source:
-                    audio = recognizer.record(source)
-                    text = recognizer.recognize_google(audio)
-            finally:
-                os.unlink(tmp_file_path)
-        
-        if not text:
-            return jsonify({'error': 'No speech detected'}), 400
-        
-        # Get prediction
-        result = predict_text(text)
-        result['transcribed_text'] = text
-        
-        return jsonify(result)
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# Speech-to-text is now handled client-side using Web Speech API
+# No server-side endpoint needed
 
 @app.route('/health')
 def health():

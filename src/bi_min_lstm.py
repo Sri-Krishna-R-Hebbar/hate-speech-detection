@@ -149,17 +149,25 @@ class BiMinLSTM(Model):
         
         # Bidirectional MinLSTM layer
         self.bi_minlstm = layers.Bidirectional(
-            layers.RNN(MinLSTMCell(lstm_units), return_sequences=False),
+            layers.RNN(MinLSTMCell(lstm_units), return_sequences=True),
             merge_mode='concat',
             name='bidirectional_minlstm'
         )
         
         # Dropout layer
         self.dropout1 = layers.Dropout(dropout_rate, name='dropout_1')
-        
+
+        # self.bi_minlstm2 = layers.Bidirectional(
+        #     layers.RNN(MinLSTMCell(lstm_units), return_sequences=False),
+        #     merge_mode='concat',
+        #     name='bidirectional_minlstm_2'
+        # )
+
+        self.pooling = layers.GlobalMaxPool1D(name='global_max_pooling')
+
         # Dense layer
         self.dense1 = layers.Dense(32, activation='relu', name='dense_1')
-        
+
         # Dropout layer
         self.dropout2 = layers.Dropout(dropout_rate, name='dropout_2')
         
@@ -172,6 +180,8 @@ class BiMinLSTM(Model):
         x = self.spatial_dropout(x, training=training)
         x = self.bi_minlstm(x, training=training)
         x = self.dropout1(x, training=training)
+        # x = self.bi_minlstm2(x, training=training)
+        x = self.pooling(x)
         x = self.dense1(x)
         x = self.dropout2(x, training=training)
         output = self.output_layer(x)

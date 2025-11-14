@@ -86,9 +86,12 @@ class DataPreprocessor:
         # Only remove TRULY useless stopwords (articles, etc that don't add meaning)
         useless_stopwords = {
             'i', 'me', 'my', 'myself', 'ours', 'ourselves', 'yourselves',
-            'himself', 'herself', 'itself', 'themselves', 
+            'himself', 'herself', 'itself', 'themselves',
             'again', 'further', 'once', 'down', 'out', 'up',
         }
+        # useless_stopwords = {
+        #
+        # }
         
         # Final stopwords: only the truly useless ones
         self.stop_words = useless_stopwords
